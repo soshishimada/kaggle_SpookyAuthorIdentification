@@ -43,64 +43,80 @@ def read_csv(file,num_line):
       i += 1
   return ids,labels,np.array(row_vec)
 
+def read_csv_test(file,num_line):
+  row_vec = []
+  labels = []
+  ids =[]
+  with open(file) as f:
+    reader = csv_unireader(f)
+    i = 0
+    for row in reader:
+      if i != 0: #skip the first row
+        ids.append(row[0])
+        row_vec.append(row[1])
+      if i >= num_line:
+        break
+      i += 1
+  return ids,np.array(row_vec)
 #get ids, labels, sentences from dataset
-ids,labels, sentences = read_csv('train.csv',19579)
+ids,labels, sentences = read_csv('train.csv',300)
+ids_test,sentences_test = read_csv_test('test.csv',19)
 
 
 
-#print all_text
-#print sentences
-
+"""
+Preprocessing for train data
+"""
 stemmer = stem.PorterStemmer()
 prepared = []
 tmp = []
 for i in range(len(sentences)):
-  #tokenization and anti capitalization
-  tokens = word_tokenize(sentences[i].lower())
+    # tokenization and anti capitalization
+    tokens = word_tokenize(sentences[i].lower())
 
-  #remove stop words and words less than length 1 e.g., "." ":" ";"
-  tokens_stoprm = filter(lambda w: len(w) > 1 ,tokens)
-  tmp= [stemmer.stem(token) for token in tokens_stoprm]
-  prepared.append(" ".join(tmp))
-  tmp =[]
+    # remove stop words and words less than length 1 e.g., "." ":" ";"
+    tokens_stoprm = filter(lambda w: len(w) > 1, tokens)
+    tmp = [stemmer.stem(token) for token in tokens_stoprm]
+    prepared.append(" ".join(tmp))
+    tmp = []
 
-words =[]
-#print "here",prepared
+words = []
+# print "here",prepared
 
-#split words in prepared
+# split words in prepared
 prepared_tmp = [prepared[i].split() for i in range(len(prepared))]
-#print prepared_tmp
-words = map(str,list(itertools.chain.from_iterable(prepared_tmp)))
-#print words
+# print prepared_tmp
+words = map(str, list(itertools.chain.from_iterable(prepared_tmp)))
+# print words
 
 counts = Counter(words)
-#print counts
+# print counts
 
 vocab = sorted(counts, key=counts.get, reverse=True)
-#print vocab
+# print vocab
 
 vocab_to_int = {word: ii for ii, word in enumerate(vocab, 1)}
 reviews_ints = []
-#print vocab_to_int
+# print vocab_to_int
 
 for each in prepared:
     reviews_ints.append([vocab_to_int[str(word.lower())] for word in each.split()])
 
-#print reviews_ints
+# print reviews_ints
 
-#print labels
-#print labels
+# print labels
+# print labels
 for i in range(len(labels)):
     if labels[i] == u'EAP':
-        labels[i] = [1,0,0]
+        labels[i] = [1, 0, 0]
     elif labels[i] == u'HPL':
-        labels[i] = [0,1,0]
+        labels[i] = [0, 1, 0]
     if labels[i] == u'MWS':
-        labels[i] = [0,0,1]
+        labels[i] = [0, 0, 1]
 labels = np.array(labels)
 
-#labels = np.array([1 if each == u'EAP' elif  each == u'EAP' else 0 for each in labels])
-#print labels
+# labels = np.array([1 if each == u'EAP' elif  each == u'EAP' else 0 for each in labels])
+# print labels
 review_lens = Counter([len(x) for x in reviews_ints])
 print("Zero-length sentence: {}".format(review_lens[0]))
 print("Maximum sentence length: {}".format(max(review_lens)))
@@ -116,6 +132,55 @@ for i, row in enumerate(reviews_ints):
     features[i, -len(row):] = np.array(row)[:seq_len]
 
 
+"""
+Preprocessing for test data
+"""
+
+prepared_test = []
+tmp_test = []
+for i in range(len(sentences_test)):
+    # tokenization and anti capitalization
+    tokens = word_tokenize(sentences_test[i].lower())
+
+    # remove stop words and words less than length 1 e.g., "." ":" ";"
+    tokens_stoprm = filter(lambda w: len(w) > 1, tokens)
+    tmp_test = [stemmer.stem(token) for token in tokens_stoprm]
+    prepared_test.append(" ".join(tmp_test))
+    tmp_test = []
+
+words = []
+# print "here",prepared
+
+# split words in prepared
+prepared_tmp_test = [prepared_test[i].split() for i in range(len(prepared_test))]
+# print prepared_tmp
+words = map(str, list(itertools.chain.from_iterable(prepared_tmp_test)))
+# print words
+
+counts = Counter(words)
+# print counts
+
+vocab_test = sorted(counts, key=counts.get, reverse=True)
+
+vocab_to_int_test = {word: ii for ii, word in enumerate(vocab_test, 1)}
+reviews_ints_test = []
+
+
+for each in prepared_test:
+    reviews_ints_test.append([vocab_to_int_test[str(word.lower())] for word in each.split()])
+review_lens_test = Counter([len(x) for x in reviews_ints_test])
+print("Zero-length sentence: {}".format(review_lens_test[0]))
+print("Maximum sentence length: {}".format(max(review_lens_test)))
+
+non_zero_idx = [ii for ii, review in enumerate(reviews_ints_test) if len(review) != 0]
+reviews_ints_test = [reviews_ints_test[ii] for ii in non_zero_idx]
+
+seq_len_test = 100
+features_test = np.zeros((len(reviews_ints_test), seq_len_test), dtype=int)
+for i, row in enumerate(reviews_ints_test):
+    features_test[i, -len(row):] = np.array(row)[:seq_len_test]
+
+
 """ 
 Training & Validation & Test data Division
 """
@@ -129,7 +194,8 @@ test_idx = int(len(val_x)*0.5)
 val_x, test_x = val_x[:test_idx], val_x[test_idx:]
 val_y, test_y = val_y[:test_idx], val_y[test_idx:]
 
-
+sub_x = features_test #submission data
+sub_size = len(sub_x)
 print("Feature Shapes:")
 print("Train set:{}".format(train_x.shape),
       "Validation set: {}".format(val_x.shape),
@@ -169,7 +235,7 @@ def inference(inputs_,batch_size, n_hidden,keep_prob,lstm_layers=2):
 
     outputs, final_state = tf.nn.dynamic_rnn(cell, embed, initial_state=initial_state)
 
-    predictions = tf.contrib.layers.fully_connected(outputs[:, -1], 3, activation_fn=tf.sigmoid)
+    predictions = tf.nn.softmax(tf.contrib.layers.fully_connected(outputs[:, -1], 3))
     return predictions
 
 def loss(labels_,predictions):
@@ -278,15 +344,19 @@ accuracy = sess.run(accuracy, feed_dict={
 })
 print "accuracy", accuracy
 # get inference
+print sub_x
 prob = sess.run(y, feed_dict={
-        inputs_: test_x,
+        inputs_: sub_x,
         keep_prob: 1.0,
-        batch_size: N_validation,
-        labels_: test_y.reshape(len(test_y), 3)
+        batch_size:sub_size
 })
 
-print prob
-print ids
+
+prob = [map(str,row) for row in prob]
+
+for i in range(len(prob)):
+    prob[i].insert(0,str(ids_test[i]))
+
 with open("tf_submission_lstm.csv", 'wb') as resultFile:
     wr = csv.writer(resultFile, dialect='excel')
     wr.writerows(prob)
