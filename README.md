@@ -5,8 +5,8 @@ I'd aproach this problem applying some convenstional machine learning approach a
 link:
 https://www.kaggle.com/c/spooky-author-identification
 ## Getting Started
-Run python files
-word_embedding.py - program to crate vectors from sentences using tf-idf
+word_embedding.py - program to crate vectors from sentences using tf-idf<br />
+to be continued...
 ### Prerequisites
 Tensor flow: version 1.2.0
 Python     : version 2.7.13
