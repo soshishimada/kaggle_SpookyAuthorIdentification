@@ -168,7 +168,7 @@ def inference(inputs_,batch_size, n_hidden,lstm_layers=2,keep_prob = 0.5):
 
     outputs, final_state = tf.nn.dynamic_rnn(cell, embed, initial_state=initial_state)
 
-    predictions = tf.contrib.layers.fully_connected(outputs[:, -1], 1, activation_fn=tf.sigmoid)
+    predictions = tf.contrib.layers.fully_connected(outputs[:, -1], 3, activation_fn=tf.sigmoid)
     return predictions
 
 def loss(labels_,predictions):
@@ -181,9 +181,10 @@ def training(loss):
     return train_step
 
 def accuracy(predictions,labels_):
+
     correct_pred = tf.equal(tf.cast(tf.round(predictions), tf.int32), labels_)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    return accuracy
+    return predictions
 
 
 """ 
@@ -213,7 +214,7 @@ accuracy = accuracy(y,labels_)
 Model Learning
 """
 
-epochs = 3
+epochs = 1
 
 init = tf.global_variables_initializer()
 sess = tf.Session()
@@ -223,7 +224,7 @@ pre_val_loss = 0
 tf.summary.FileWriter(LOG_DIR,sess.graph)
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter("./log/test_short/", sess.graph_def)
-
+print test_y.reshape(len(test_y), 3)
 
 for epoch in range(epochs):
     train_x, train_y = shuffle(train_x,train_y)
@@ -252,7 +253,7 @@ for epoch in range(epochs):
 # after training,compute the accuracy
 accuracy = sess.run(accuracy, feed_dict={
         inputs_: test_x,
-        keep_prob: 0.5,
+        keep_prob: 1.0,
         batch_size: N_validation,
         labels_: test_y.reshape(len(test_y), 3)
 })
