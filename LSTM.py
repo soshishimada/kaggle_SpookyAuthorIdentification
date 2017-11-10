@@ -59,8 +59,8 @@ def read_csv_test(file,num_line):
       i += 1
   return ids,np.array(row_vec)
 #get ids, labels, sentences from dataset
-ids,labels, sentences = read_csv('train.csv',300)
-ids_test,sentences_test = read_csv_test('test.csv',19)
+ids,labels, sentences = read_csv('train.csv',19579)
+ids_test,sentences_test = read_csv_test('test.csv',8392)
 
 
 
@@ -126,7 +126,7 @@ non_zero_idx = [ii for ii, review in enumerate(reviews_ints) if len(review) != 0
 reviews_ints = [reviews_ints[ii] for ii in non_zero_idx]
 labels = np.array([labels[ii] for ii in non_zero_idx])
 
-seq_len = 100
+seq_len = 500
 features = np.zeros((len(reviews_ints), seq_len), dtype=int)
 for i, row in enumerate(reviews_ints):
     features[i, -len(row):] = np.array(row)[:seq_len]
@@ -175,7 +175,7 @@ print("Maximum sentence length: {}".format(max(review_lens_test)))
 non_zero_idx = [ii for ii, review in enumerate(reviews_ints_test) if len(review) != 0]
 reviews_ints_test = [reviews_ints_test[ii] for ii in non_zero_idx]
 
-seq_len_test = 100
+seq_len_test = 500
 features_test = np.zeros((len(reviews_ints_test), seq_len_test), dtype=int)
 for i, row in enumerate(reviews_ints_test):
     features_test[i, -len(row):] = np.array(row)[:seq_len_test]
@@ -229,7 +229,7 @@ def inference(inputs_,batch_size, n_hidden,keep_prob,lstm_layers=2):
         initial_state = cell.zero_state(batch_size, tf.float32)
 
         # Size of the embedding vectors (number of units in the embedding layer)
-        embed_size =100
+        embed_size =5555500
         embedding = tf.Variable(tf.random_uniform((n_words, embed_size), -1, 1))
         embed = tf.nn.embedding_lookup(embedding, inputs_)
 
@@ -288,7 +288,7 @@ accuracy = accuracy(y,labels_)
 Model Learning
 """
 
-epochs =1 
+epochs =25 
 
 init = tf.global_variables_initializer()
 sess = tf.Session()
@@ -357,7 +357,7 @@ prob = [map(str,row) for row in prob]
 for i in range(len(prob)):
     prob[i].insert(0,str(ids_test[i]))
 
-with open("tf_submission_lstm.csv", 'wb') as resultFile:
+with open("tf_submission_lstm_e"+str(epochs)+".csv", 'wb') as resultFile:
     wr = csv.writer(resultFile, dialect='excel')
     wr.writerows(prob)
 
