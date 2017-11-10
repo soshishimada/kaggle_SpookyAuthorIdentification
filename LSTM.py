@@ -43,7 +43,7 @@ def read_csv(file,num_line):
   return ids,labels,np.array(row_vec)
 
 #get ids, labels, sentences from dataset
-ids,labels, sentences = read_csv('/Users/user/Desktop/desktop/Python/kaggle/SpookyAuthorIdentification/train.csv',830)
+ids,labels, sentences = read_csv('/Users/user/Desktop/desktop/Python/kaggle/SpookyAuthorIdentification/train.csv',3000)
 
 
 
@@ -143,7 +143,7 @@ print train_x[0].shape
 
 graph = tf.Graph()
 
-def inference(inputs_,batch_size, n_hidden,lstm_layers=2,keep_prob = 0.5):
+def inference(inputs_,batch_size, n_hidden,lstm_layers=2):
 
     def weight_variable(shape):
         initial = tf.truncated_normal(shape, stddev=0.01)
@@ -182,9 +182,15 @@ def training(loss):
 
 def accuracy(predictions,labels_):
 
-    correct_pred = tf.equal(tf.cast(tf.round(predictions), tf.int32), labels_)
+
+    predictions = tf.cast(tf.argmax(predictions, 1, name=None), tf.int32)
+    predictions = tf.reshape(predictions,[tf.size(predictions),1])
+    labels_= tf.cast(tf.argmax(labels_,1, name=None), tf.int32)
+    labels_= tf.reshape(labels_,[tf.size(labels_),1])
+
+    correct_pred = tf.equal(predictions,labels_)
     accuracy = tf.reduce_mean(tf.cast(correct_pred, tf.float32))
-    return predictions
+    return accuracy
 
 
 """ 
@@ -193,12 +199,13 @@ Model Configuation
 
 n_out = 1
 lstm_size = 256
-batch_size_int = 50
+batch_size_int = 500
 
 
 n_words = len(vocab_to_int) + 1
 n_batch = len(train_x) // batch_size_int
 N_validation = len(test_y)
+N_train = len(train_x)
 
 inputs_ = tf.placeholder(tf.int32, [None, None], name='inputs')
 labels_ = tf.placeholder(tf.int32, [None, None], name='labels')
@@ -214,7 +221,7 @@ accuracy = accuracy(y,labels_)
 Model Learning
 """
 
-epochs = 1
+epochs = 10
 
 init = tf.global_variables_initializer()
 sess = tf.Session()
@@ -224,7 +231,7 @@ pre_val_loss = 0
 tf.summary.FileWriter(LOG_DIR,sess.graph)
 summary_op = tf.summary.merge_all()
 summary_writer = tf.summary.FileWriter("./log/test_short/", sess.graph_def)
-print test_y.reshape(len(test_y), 3)
+#print test_y.reshape(len(test_y), 3)
 
 for epoch in range(epochs):
     train_x, train_y = shuffle(train_x,train_y)
@@ -233,22 +240,33 @@ for epoch in range(epochs):
         start = i * batch_size_int
         end = start + batch_size_int
         #print train_y[start:end].reshape(len(train_y[start:end]),3)
-        print train_x[start:end]
+        #print train_x[start:end]
         inf = sess.run(train_step,feed_dict={
             inputs_: train_x[start:end],
             batch_size: batch_size_int,
+            keep_prob: 0.5,
             labels_: train_y[start:end].reshape(len(train_y[start:end]),3)
         })
-        print inf
+
+
     # after one epoch,compute the loss
     val_loss = loss.eval(session=sess, feed_dict={
         inputs_: test_x,
-        keep_prob: 0.5,
+        keep_prob: 1.0,
         batch_size: N_validation,
         labels_: test_y.reshape(len(test_y),3)
     })
     print('epoch:', epoch, ' validation loss:', val_loss-pre_val_loss)
     pre_val_loss = val_loss
+
+    # after training,compute the accuracy
+    accuracy_tmp = sess.run(accuracy, feed_dict={
+        inputs_: train_x,
+        keep_prob: 1.0,
+        batch_size: N_train,
+        labels_: train_y.reshape(len(train_y), 3)
+    })
+    print "train_accuracy", accuracy_tmp
 
 # after training,compute the accuracy
 accuracy = sess.run(accuracy, feed_dict={
