@@ -1,5 +1,6 @@
 import numpy as np
 import tensorflow as tf
+from itertools import izip
 import csv
 import os,codecs
 import itertools
@@ -43,7 +44,7 @@ def read_csv(file,num_line):
   return ids,labels,np.array(row_vec)
 
 #get ids, labels, sentences from dataset
-ids,labels, sentences = read_csv('/Users/user/Desktop/desktop/Python/kaggle/SpookyAuthorIdentification/train.csv',3000)
+ids,labels, sentences = read_csv('train.csv',19579)
 
 
 
@@ -109,7 +110,7 @@ non_zero_idx = [ii for ii, review in enumerate(reviews_ints) if len(review) != 0
 reviews_ints = [reviews_ints[ii] for ii in non_zero_idx]
 labels = np.array([labels[ii] for ii in non_zero_idx])
 
-seq_len = 200
+seq_len = 100
 features = np.zeros((len(reviews_ints), seq_len), dtype=int)
 for i, row in enumerate(reviews_ints):
     features[i, -len(row):] = np.array(row)[:seq_len]
@@ -143,7 +144,7 @@ print train_x[0].shape
 
 graph = tf.Graph()
 
-def inference(inputs_,batch_size, n_hidden,lstm_layers=2):
+def inference(inputs_,batch_size, n_hidden,keep_prob,lstm_layers=2):
 
     def weight_variable(shape):
         initial = tf.truncated_normal(shape, stddev=0.01)
@@ -162,7 +163,7 @@ def inference(inputs_,batch_size, n_hidden,lstm_layers=2):
         initial_state = cell.zero_state(batch_size, tf.float32)
 
         # Size of the embedding vectors (number of units in the embedding layer)
-        embed_size = 200
+        embed_size =100
         embedding = tf.Variable(tf.random_uniform((n_words, embed_size), -1, 1))
         embed = tf.nn.embedding_lookup(embedding, inputs_)
 
@@ -212,7 +213,7 @@ labels_ = tf.placeholder(tf.int32, [None, None], name='labels')
 batch_size = tf.placeholder(tf.int32, shape=[])
 keep_prob = tf.placeholder(tf.float32, name='keep_prob')
 
-y = inference(inputs_, n_hidden=lstm_size, batch_size=batch_size)
+y = inference(inputs_, n_hidden=lstm_size,keep_prob=keep_prob, batch_size=batch_size)
 loss = loss(labels_,y)
 train_step = training(loss)
 accuracy = accuracy(y,labels_)
@@ -221,7 +222,7 @@ accuracy = accuracy(y,labels_)
 Model Learning
 """
 
-epochs = 10
+epochs =1 
 
 init = tf.global_variables_initializer()
 sess = tf.Session()
@@ -276,9 +277,19 @@ accuracy = sess.run(accuracy, feed_dict={
         labels_: test_y.reshape(len(test_y), 3)
 })
 print "accuracy", accuracy
+# get inference
+prob = sess.run(y, feed_dict={
+        inputs_: test_x,
+        keep_prob: 1.0,
+        batch_size: N_validation,
+        labels_: test_y.reshape(len(test_y), 3)
+})
 
-
-
+print prob
+print ids
+with open("tf_submission_lstm.csv", 'wb') as resultFile:
+    wr = csv.writer(resultFile, dialect='excel')
+    wr.writerows(prob)
 
 
 
